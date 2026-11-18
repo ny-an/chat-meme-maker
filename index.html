@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f9">
+  <title>チャットミームメーカー</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f5f6f9;
+      --ink: #182031;
+      --muted: #555e71;
+      --line: #dce1ea;
+      --blue: #2459e8;
+      --white: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; }
+    input, button, textarea, select { font: inherit; }
+    button, .file-control, input[type="color"], select { cursor: pointer; }
+    button:disabled, select:disabled { cursor: default; opacity: .52; }
+    :focus-visible { outline: 3px solid #4f7cf8; outline-offset: 3px; }
+    .topbar { position: sticky; z-index: 1; top: 0; background: var(--white); border-bottom: 1px solid var(--line); }
+    .topbar-inner, .studio { width: min(1512px, 100%); margin-inline: auto; padding-inline: clamp(16px, 3.4vw, 56px); }
+    .topbar-inner { display: flex; gap: 16px; align-items: center; justify-content: space-between; min-height: 78px; padding-block: 12px; }
+    .brand { display: flex; gap: 12px; align-items: center; min-width: 0; }
+    .brand-mark { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 8px; background: var(--ink); }
+    .brand-mark::after {
+      content: "";
+      width: 20px;
+      height: 16px;
+      background: var(--white);
+      clip-path: polygon(10% 0, 90% 0, 90% 12%, 100% 12%, 100% 70%, 90% 70%, 90% 84%, 42% 84%, 20% 100%, 20% 84%, 10% 84%, 10% 70%, 0 70%, 0 12%, 10% 12%);
+    }
+    h1, h2 { margin: 0; line-height: 1.35; }
+    h1 { font-size: clamp(16px, 2.2vw, 22px); font-weight: 800; }
+    h2 { font-size: 16px; font-weight: 750; }
+    .button {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--white);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+    .button:hover:not(:disabled), .file-control:hover { background: #eef2fa; border-color: #b8c5db; }
+    .button.primary { min-height: 44px; padding-inline: 16px; color: var(--white); background: var(--blue); border-color: var(--blue); }
+    .button.primary:hover:not(:disabled) { background: #1948cb; border-color: #1948cb; }
+    .download-icon {
+      position: relative;
+      width: 15px;
+      height: 15px;
+      border-bottom: 2px solid currentColor;
+    }
+    .download-icon::before {
+      position: absolute;
+      content: "";
+      width: 2px;
+      height: 9px;
+      left: 6.5px;
+      top: 0;
+      background: currentColor;
+    }
+    .download-icon::after {
+      position: absolute;
+      content: "";
+      width: 5px;
+      height: 5px;
+      left: 4px;
+      top: 3px;
+      border: solid currentColor;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    .studio {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 375px);
+      grid-template-rows: auto 1fr;
+      grid-template-areas: "preview editor" "appearance editor";
+      gap: 20px clamp(20px, 2.2vw, 34px);
+      align-items: start;
+      padding-top: clamp(24px, 3vw, 46px);
+      padding-bottom: 40px;
+    }
+    .preview { grid-area: preview; min-width: 0; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .dimensions { color: var(--muted); font: 12px ui-monospace, Menlo, Consolas, monospace; white-space: nowrap; }
+    .preview-frame { margin-top: 12px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #edf0f7; }
+    canvas { display: block; width: 100%; height: auto; }
+    .export-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+    .export-controls a { text-decoration: none; }
+    .share-guide { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 8px 0 0; }
+    .panel { border: 1px solid var(--line); border-radius: 10px; background: var(--white); padding: 20px; min-width: 0; }
+    .appearance { grid-area: appearance; }
+    .appearance-controls { display: flex; flex-wrap: wrap; align-items: start; gap: 16px 22px; margin-top: 14px; }
+    .field { display: grid; gap: 6px; min-width: 0; }
+    .field > label, .field-label { font-size: 12px; font-weight: 700; }
+    .size-controls { display: flex; align-items: center; gap: 10px; }
+    .size-controls input {
+      width: 132px;
+      min-height: 40px;
+      margin: 0;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+    .size-controls output { min-width: 4ch; color: var(--muted); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+    input[type="text"], textarea, select {
+      width: 100%;
+      min-width: 0;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--ink);
+      padding: 8px 10px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    input::placeholder { color: #657087; }
+    .file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .file-control { position: relative; cursor: pointer; }
+    .file-control:focus-within { outline: 3px solid #4f7cf8; outline-offset: 3px; }
+    .file-control input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .file-name { overflow-wrap: anywhere; max-width: 30ch; color: var(--muted); font-size: 12px; }
+    .color-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .color-field input { width: 60px; height: 40px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); }
+    .color-field input::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-field input::-webkit-color-swatch { border-radius: 3px; }
+    .color-field input::-moz-color-swatch { border-radius: 3px; }
+    .text-button { padding: 4px 0; border: 0; background: transparent; color: var(--muted); font-size: 12px; }
+    .text-button:hover:not(:disabled) { text-decoration: underline; color: var(--ink); }
+    .editor { grid-area: editor; display: grid; gap: 16px; }
+    .chat-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .message-editor { display: grid; gap: 8px; padding-top: 13px; border-top: 1px solid var(--line); }
+    .message-editor .button { min-height: 34px; }
+    .message-list { display: grid; gap: 7px; }
+    .message-row { display: grid; grid-template-columns: minmax(0, 1fr) 35px; align-items: center; gap: 6px; }
+    .remove-message { padding: 0; color: var(--muted); font-size: 19px; font-weight: 400; line-height: 1; }
+    #notice {
+      position: fixed;
+      z-index: 2;
+      right: 20px;
+      bottom: 20px;
+      max-width: calc(100% - 40px);
+      margin: 0;
+      padding: 10px 16px;
+      border-radius: 7px;
+      background: var(--ink);
+      color: var(--white);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    #notice:empty { padding: 0; }
+    @media (max-width: 800px) {
+      .studio {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        grid-template-areas: "preview" "appearance" "editor";
+      }
+    }
+    @media (max-width: 470px) {
+      .topbar-inner { min-height: 64px; gap: 10px; }
+      .brand { gap: 8px; }
+      .brand-mark { flex-basis: 28px; height: 28px; }
+      .brand-mark::after { width: 16px; height: 13px; }
+      .button.primary { padding-inline: 10px; }
+      .panel { padding: 15px; }
+      input[type="text"], textarea, select { font-size: 16px; }
+    }
+    @media (max-width: 355px) {
+      h1 { font-size: 14px; }
+      .download-icon { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h1>チャットミームメーカー</h1>
+      </div>
+      <button class="button primary" id="share" type="button" disabled>画像を共有</button>
+    </div>
+  </header>
+  <main class="studio">
+    <section class="preview" aria-labelledby="preview-heading">
+      <div class="section-heading">
+        <h2 id="preview-heading">プレビュー</h2>
+        <span class="dimensions">2400 × 1350 px</span>
+      </div>
+      <div class="preview-frame">
+        <canvas id="meme" width="2400" height="1350" role="img" aria-label="作成中のミーム画像"></canvas>
+      </div>
+      <div class="export-controls">
+        <button class="button" id="download" type="button" disabled>
+          <span class="download-icon" aria-hidden="true"></span>PNGを保存
+        </button>
+        <a class="button" id="open-x" href="https://x.com/intent/tweet" target="_blank" rel="noopener noreferrer">Xの投稿画面を開く <span aria-hidden="true">↗</span></a>
+      </div>
+      <p class="share-guide">共有先にXが出ない場合は、保存したPNGを投稿画面で添付できます。</p>
+    </section>
+    <section class="appearance panel" aria-labelledby="appearance-heading">
+      <div class="section-heading">
+        <h2 id="appearance-heading">見た目</h2>
+        <button class="button" id="randomize-character" type="button">キャラと表情をランダム</button>
+      </div>
+      <div class="appearance-controls">
+        <div class="field">
+          <label for="character">キャラクター</label>
+          <select id="character">
+            <option value="dog">犬</option>
+            <option value="cat">猫</option>
+            <option value="rabbit">うさぎ</option>
+            <option value="tiger">とら</option>
+            <option value="dragon">龍</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="expression">表情</label>
+          <select id="expression">
+            <option value="cry">泣き顔</option>
+            <option value="blank">真顔</option>
+            <option value="panic">あせり顔</option>
+            <option value="smile">笑顔</option>
+            <option value="laugh">爆笑</option>
+            <option value="sob">号泣</option>
+            <option value="angry">怒り</option>
+            <option value="shock">びっくり</option>
+            <option value="smug">ドヤ顔</option>
+            <option value="annoyed">ジト目</option>
+            <option value="sad">しょんぼり</option>
+            <option value="confused">困り顔</option>
+            <option value="blush">照れ顔</option>
+            <option value="heart">ハート目</option>
+            <option value="sleepy">眠い顔</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="character-size">キャラの大きさ</label>
+          <div class="size-controls">
+            <input id="character-size" type="range" min="50" max="150" step="5" value="100" aria-valuetext="100%">
+            <output id="character-size-value" for="character-size" aria-hidden="true">100%</output>
+          </div>
+        </div>
+        <div class="field">
+          <label for="font">画像のフォント</label>
+          <select id="font">
+            <option value="bold">極太ゴシック</option>
+            <option value="gothic">ゴシック</option>
+            <option value="mincho">明朝</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="field-label">キャラクター画像</span>
+          <div class="file-actions">
+            <label class="file-control button">
+              画像を選ぶ
+              <input id="character-file" type="file" accept="image/png,image/jpeg,image/webp" aria-label="キャラクター画像を選ぶ（PNG・JPEG・WebP）">
+            </label>
+            <button class="button" id="remove-character" type="button" hidden>画像を外す</button>
+          </div>
+          <span class="file-name" id="file-name" hidden></span>
+        </div>
+        <div class="field color-field">
+          <label for="accent">吹き出しの色</label>
+          <div class="color-controls">
+            <input id="accent" type="color">
+            <button class="text-button" id="reset-accent" type="button" disabled>標準の青に戻す</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="editor panel" aria-labelledby="editor-heading">
+      <div class="section-heading">
+        <h2 id="editor-heading">テキスト</h2>
+        <button class="text-button" id="reset" type="button">初期状態に戻す</button>
+      </div>
+      <div class="field">
+        <label for="title">見出し</label>
+        <textarea id="title" rows="2" maxlength="100" spellcheck="false"></textarea>
+      </div>
+      <div class="chat-fields">
+        <div class="field">
+          <label for="name">相手の名前</label>
+          <input id="name" type="text" maxlength="32" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="time">時刻・場面</label>
+          <input id="time" type="text" maxlength="48" spellcheck="false">
+        </div>
+      </div>
+      <div class="field">
+        <label for="incoming">相手の最初の一言（任意）</label>
+        <input id="incoming" type="text" maxlength="96" spellcheck="false">
+      </div>
+      <div class="message-editor" role="group" aria-labelledby="messages-label">
+        <div class="section-heading">
+          <span id="messages-label" class="field-label">自分の吹き出し</span>
+          <button class="button" id="add-message" type="button" aria-label="吹き出しを追加">＋ 追加</button>
+        </div>
+        <div id="messages" class="message-list"></div>
+      </div>
+      <div class="field">
+        <label for="status">既読表示</label>
+        <input id="status" type="text" maxlength="48" spellcheck="false">
+      </div>
+    </section>
+  </main>
+  <p id="notice" role="status"></p>
+  <noscript>画像の編集と保存にはJavaScriptが必要です。</noscript>
+  <script src="./conversation-topics.js"></script>
+  <script src="./sprite-assets.js"></script>
+  <script src="./meme-maker.js"></script>
+</body>
+</html>
