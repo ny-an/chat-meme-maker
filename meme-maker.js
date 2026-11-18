@@ -257,9 +257,11 @@ function renderMeme(canvas, state) {
 
     const characterChoice = document.querySelector("#character");
     const expressionChoice = document.querySelector("#expression");
+    const initialCharacter = randomCharacterAndExpression();
+    const initialConversation = randomConversation();
     const example = {
-      ...randomCharacterAndExpression(),
-      ...randomConversation(),
+      ...initialCharacter,
+      ...initialConversation,
       accent: "#2b64f5",
       font: "bold",
       characterSize: 100
@@ -269,6 +271,7 @@ function renderMeme(canvas, state) {
     const messageList = document.querySelector("#messages");
     const addMessage = document.querySelector("#add-message");
     const randomizeCharacter = document.querySelector("#randomize-character");
+    const randomizeConversation = document.querySelector("#randomize-conversation");
     const characterFile = document.querySelector("#character-file");
     const removeCharacter = document.querySelector("#remove-character");
     const fileName = document.querySelector("#file-name");
@@ -285,6 +288,7 @@ function renderMeme(canvas, state) {
       .map((key) => [key, document.getElementById(key)]);
 
     let state;
+    let currentConversation;
     let characterRequest = 0;
     let noticeTimer;
     let frame;
@@ -399,6 +403,7 @@ function renderMeme(canvas, state) {
     function reset() {
       characterRequest += 1;
       characterFile.value = "";
+      currentConversation = initialConversation;
       state = { ...example, messages: [...example.messages], characterImage: null };
       fields.forEach(([key, input]) => { input.value = state[key]; });
       characterSize.value = state.characterSize;
@@ -428,6 +433,18 @@ function renderMeme(canvas, state) {
       characterChoice.value = selection.character;
       expressionChoice.value = selection.expression;
       Object.assign(state, selection);
+      updatePreview();
+    });
+
+    randomizeConversation.addEventListener("click", () => {
+      const current = conversationTopics.indexOf(currentConversation);
+      const topic = conversationTopics[randomIndex(conversationTopics.length, current)];
+      currentConversation = topic;
+      Object.assign(state, topic, { messages: [...topic.messages] });
+      for (const [key, input] of fields) {
+        if (Object.hasOwn(topic, key)) input.value = topic[key];
+      }
+      refreshMessages();
       updatePreview();
     });
 
